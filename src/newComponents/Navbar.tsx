@@ -303,7 +303,7 @@ const Navbar: React.FC = () => {
 
       {/* Mobile Navigation Toggle */}
       <div className="lg:hidden flex items-center justify-between gap-3 mt-2">
-        <img alt="logo" className="w-full max-w-[170px]" src="/images2/logo.png" />
+        <img alt="logo" className="w-full max-w-[170px]" src="/images2/logo-green.png" />
         <button
           className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
           onClick={toggleNav}
