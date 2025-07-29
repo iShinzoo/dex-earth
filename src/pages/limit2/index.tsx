@@ -545,7 +545,7 @@ const Limit2 = () => {
             <section className="md:py-[90px] py-[40px] px-4">
                 <h2 className="font-medium lg:text-[64px] sm:text-[48px] text-[32px] md:leading-[70.4px] leading-[50px] text-center text-[#3DBEA3] max-w-[514px] mx-auto">
                     How
-                    <span className="text-[#2A8576]">Pool </span>Exchange Works
+                    <span className="text-[#2A8576]"> Limit </span> Order Works
                 </h2>
                 <p className="font-normal md:text-base text-xs md:leading-[25px] text-center text-[#767676] max-w-[910px] mx-auto pt-[30px]">
                     Ol regnbågsbarn sedan trigraf. Sus bloggosfär. Flexitarian
