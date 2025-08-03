@@ -1,36 +1,38 @@
 import { JSBI, Percent, Token } from '@bidelity/sdk';
-import { TokenList } from '@uniswap/token-lists/dist/types';
 import { AbstractConnector } from '@web3-react/abstract-connector';
 import { useActiveWeb3React } from 'hooks';
 import { WrappedTokenInfo } from 'state/lists/hooks';
+import { TokenList } from '@uniswap/token-lists/dist/types';
 
 import {
   // fortmatic,
   injected,
   // portis,
   walletconnect,
+  // walletlink,
 } from '../connectors';
+import { InjectedConnector } from '@web3-react/injected-connector';
 import { ChainId, Factory, InitCode, Router } from './contractConstants';
 
-// const chainss = {
-//   11155111: 'SEPOLIA',
-//   97: 'BINANCETEST',
-//   80002: 'AMOY',
-//   421614: 'ARBITRUM',
-//   4002: 'FANTOM',
-//   1: 'MAINNET',
-//   43113: 'AVALANCE',
-//   11155420: 'OPTIMISM',
-//   59141: 'LINEA',
-//   44787: 'CELO',
-//   84532: 'BASE',
-//   168587773: 'BLAST',
-//   1313161555: 'AURORA',
-//   534351: 'SCROLL',
-//   1287: 'MOONBASE',
-// };
+const chainss = {
+  11155111: 'SEPOLIA',
+  97: 'BINANCETEST',
+  80002: 'AMOY',
+  421614: 'ARBITRUM',
+  4002: 'FANTOM',
+  1: 'MAINNET',
+  43113: 'AVALANCE',
+  11155420: 'OPTIMISM',
+  59141: 'LINEA',
+  44787: 'CELO',
+  84532: 'BASE',
+  168587773: 'BLAST',
+  1313161555: 'AURORA',
+  534351: 'SCROLL',
+  1287: 'MOONBASE',
+};
 
-export const mobileWidth = 1000;
+export const mobile_width = 1000;
 
 export const graphEndPoints: { [key: string]: string } = {
   1: '',
@@ -138,7 +140,7 @@ export const BLID_ADDRESS = '0x9ea167b7a205df38d8de4da6c3d2ca58b9e5cb66'; // SEP
 export const feeLimit = 0.35;
 export const executorFee = 1e15;
 export const expire = 24 * 3600 * 90; //90 days
-export const BitqueryKey = 'BQYAUI1wWPE1jS3hJXeuIq5UjVsjjOue';
+export const bitquery_key = 'BQYAUI1wWPE1jS3hJXeuIq5UjVsjjOue';
 
 export const WETH_ADDRESS = {
   [ChainId.MAINNET]: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
@@ -161,7 +163,7 @@ export const WETH_ADDRESS = {
 
 export const CFC_TOKEN_ADDRESS = '0x9BED7e1B07be88894bBf599b50E8189C55b0a888';
 
-export const ChainToSymboll = {
+export const Chain_To_Symboll = {
   '97': 'BNB',
   '11155111': 'SEP',
   '1': 'ETH',
@@ -409,7 +411,7 @@ export const FIVE_PERCENTS = 5;
 export const ONE_HUNDRED = 100;
 export const ZERO_STRING = '0';
 
-export const ChainIdChainName = {
+export const chainId_ChainName = {
   '11155111': 'SEPOLIA',
   '97': 'BINANCETEST',
   '80002': 'AMOY',
@@ -614,6 +616,14 @@ export const tokenAddresses = {
   tokens: [
     {
       address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+      chainId: 97,
+      decimals: 18,
+      logoURI: 'https://s2.coinmarketcap.com/static/img/coins/64x64/1839.png',
+      name: 'BINANCE',
+      symbol: 'BNB',
+    },
+    {
+      address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
       chainId: 80002,
       decimals: 18,
       logoURI: 'https://s2.coinmarketcap.com/static/img/coins/64x64/1839.png',
@@ -646,10 +656,10 @@ export const tokenAddresses = {
     },
     {
       chainId: 11155111,
-        address: '0x4f08A4682C1871300f42D8686344dbD00CB99B51',
-        name: 'MyOFT',
-        symbol: 'MyOFT',
-        decimals: 18,
+      address: '0x254d06f33bDc5b8ee05b2ea472107E300226659A',
+      name: 'aUSDC',
+      symbol: 'aUSDC',
+      decimals: 6,
       logoURI: 'https://assets.coingecko.com/coins/images/12645/thumb/AAVE.png?1601374110',
     },
     {
@@ -662,10 +672,10 @@ export const tokenAddresses = {
     },
     {
       chainId: 97,
-        address: '0x70E594c78B041E2d430236D733b33170b0F4A749',
-        name: 'MyOFT',
-        symbol: 'MyOFT',
-        decimals: 18,
+      address: '0x510601cb8Db1fD794DCE6186078b27A5e2944Ad6',
+      name: 'MDT',
+      symbol: 'MDT',
+      decimals: 18,
       logoURI: 'https://assets.coingecko.com/coins/images/12409/thumb/amp-200x200.png?1599625397',
     },
     {
@@ -759,14 +769,14 @@ export const tokenAddresses = {
   ],
 };
 
-export interface TokenInfo {
+export interface tokenInfo {
   address: string;
   balance: number;
   chainId: number;
   decimals: number;
   name: string;
   symbol: string;
-  TokenInfo: {
+  tokenInfo: {
     address: string;
     chainId: string;
     decimals: number;
@@ -815,7 +825,7 @@ export type TokenAddressMap = Readonly<
   { [chainId in ChainIds]: Readonly<{ [tokenAddress: string]: { token: WrappedTokenInfo; list: TokenList } }> }
 >;
 
-export const EmptyListTokenInfo: TokenAddressMaptokeninfo = {
+export const EMPTY_LIST_tokeninfo: TokenAddressMaptokeninfo = {
   [ChainId.MAINNET]: {},
   [ChainId.BINANCETEST]: {},
   [ChainId.AMOY]: {},
@@ -834,7 +844,7 @@ export const EmptyListTokenInfo: TokenAddressMaptokeninfo = {
 };
 
 export type TokenAddressMaptokeninfo = Readonly<
-  { [chainId in ChainId]: Readonly<{ [tokenAddress: string]: { token: TokenInfo; list: TokenList } }> }
+  { [chainId in ChainId]: Readonly<{ [tokenAddress: string]: { token: tokenInfo; list: TokenList } }> }
 >;
 
 export function combineMaps(map1: TokenAddressMap, map2: TokenAddressMap): TokenAddressMap {

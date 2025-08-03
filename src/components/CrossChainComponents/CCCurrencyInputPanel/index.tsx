@@ -3,7 +3,7 @@ import CurrencySearchModal from '../CurrencySearchModal';
 import styled from 'styled-components';
 import { Currency } from '@bidelity/sdk';
 import Dwn from '../../../assets/images/arrow2.png';
-import { TokenInfo } from '../../../constants';
+import { tokenInfo } from '../../../constants';
 
 const StyledImage = styled.img`
   width: 30px;
@@ -19,8 +19,8 @@ interface CCCurrencyInputPanelProps {
   isOpen: boolean;
   onDismiss: () => void;
   onCurrencySelect: (currency: Currency) => void;
-  selectedCurrency: TokenInfo | undefined;
-  otherSelectedCurrency: TokenInfo | undefined;
+  selectedCurrency: tokenInfo | undefined;
+  otherSelectedCurrency: tokenInfo | undefined;
   showCommonBases: boolean | undefined;
   chainId: number;
 }
@@ -47,12 +47,12 @@ export function CCCurrencyInputPanel({
     <>
       <DropDown className="ExBox-right">
         <button onClick={() => setModalOpen(true)} className="selectBtn">
-          <StyledImage src={selectedCurrency?.TokenInfo?.logoURI} alt="img" />
+          <StyledImage src={selectedCurrency?.tokenInfo?.logoURI} alt="img" />
           <span>
             Token{' '}
             <b style={{ color: 'black' }}>
               {' '}
-              {selectedCurrency ? (selectedCurrency?.TokenInfo?.symbol).slice(0, 8) : 'Select'}
+              {selectedCurrency ? (selectedCurrency?.tokenInfo?.symbol).slice(0, 8) : 'Select'}
             </b>
           </span>
           <img className="arrow" src={Dwn} alt="img" />

@@ -16,8 +16,7 @@ import ChainDropDown from '../../components/ChainDropDown';
 import { useOnClickOutside } from '../../hooks/useOnClickOutside';
 import Gs from '../../theme/globalStyles';
 import Media from '../../theme/media-breackpoint';
-// eslint-disable-next-line @typescript-eslint/camelcase
-import { ChainIdChainName } from '../../constants';
+import { chainId_ChainName } from '../../constants/index';
 import { useWalletModalToggle } from '../../state/application/hooks';
 
 export const AccountElement = styled.div<{ active: boolean }>`
@@ -294,7 +293,7 @@ export default function Header({
     imageLogo = caution;
   } else {
     // eslint-disable-next-line @typescript-eslint/camelcase
-    const chainname = ChainIdChainName[chainId?.toString() as keyof typeof ChainIdChainName];
+    const chainname = chainId_ChainName[chainId?.toString() as keyof typeof chainId_ChainName];
     imageLogo = `./images/${chainname}.png`;
   }
   const toggleWalletModal = useWalletModalToggle();

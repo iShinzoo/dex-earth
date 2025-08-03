@@ -8,8 +8,8 @@ import {
   Chain,
   chains,
   tokenAddresses,
-  TokenInfo,
-  EmptyListTokenInfo,
+  tokenInfo,
+  EMPTY_LIST_tokeninfo,
   ChainIds,
   TokenAddressMaptokeninfo,
   setOutPutChainId,
@@ -43,7 +43,7 @@ export function listToTokenMap(list: TokenList): TokenAddressMaptokeninfo {
         },
       };
     },
-    { ...EmptyListTokenInfo }
+    { ...EMPTY_LIST_tokeninfo }
   );
   listCache?.set(list, map);
   // console.log('here 1', map);
@@ -53,11 +53,11 @@ export function listToTokenMap(list: TokenList): TokenAddressMaptokeninfo {
 export function useTokensFromMap(
   tokenMap: TokenAddressMaptokeninfo,
   chainId: ChainIds | undefined
-): { [address: string]: TokenInfo } {
+): { [address: string]: tokenInfo } {
   return useMemo(() => {
     if (!chainId) return {};
     // reduce to just tokens
-    const mapWithoutUrls = Object.keys(tokenMap[chainId])?.reduce<{ [address: string]: TokenInfo }>(
+    const mapWithoutUrls = Object.keys(tokenMap[chainId])?.reduce<{ [address: string]: tokenInfo }>(
       (newMap, address) => {
         newMap[address] = tokenMap[chainId][address].token;
         return newMap;
@@ -72,11 +72,11 @@ export function useTokensFromMap(
 export function TokensFromMap(
   tokenMap: TokenAddressMaptokeninfo,
   chainId: ChainIds | undefined
-): { [address: string]: TokenInfo } {
+): { [address: string]: tokenInfo } {
   return useMemo(() => {
     if (!chainId) return {};
     // reduce to just tokens
-    const mapWithoutUrls = Object.keys(tokenMap[chainId])?.reduce<{ [address: string]: TokenInfo }>(
+    const mapWithoutUrls = Object.keys(tokenMap[chainId])?.reduce<{ [address: string]: tokenInfo }>(
       (newMap, address) => {
         newMap[address] = tokenMap[chainId][address].token;
         return newMap;
@@ -90,9 +90,9 @@ export function TokensFromMap(
 // TODO
 
 export function usePreSelectedCurrency(chainId: number) {
-  const _inputCurrency: TokenInfo[] = Object.values(TokensFromMap(listToTokenMap(tokenAddresses), chainId));
+  const _inputCurrency: tokenInfo[] = Object.values(TokensFromMap(listToTokenMap(tokenAddresses), chainId));
   const inArr = useMemo(() => _inputCurrency, [_inputCurrency]);
-  const _outputCurrency: TokenInfo[] = Object.values(
+  const _outputCurrency: tokenInfo[] = Object.values(
     TokensFromMap(listToTokenMap(tokenAddresses), setOutPutChainId[chainId])
   );
   const outArr = useMemo(() => _outputCurrency, [_outputCurrency]);

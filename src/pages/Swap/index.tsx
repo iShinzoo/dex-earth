@@ -55,7 +55,9 @@ export default function Swap() {
   }, []);
   const defaultTokens = useAllTokens();
   const swapFee = useSwapPercents();
-  const importTokensNotInDefault = urlLoadedTokens.filter((token) => !Boolean(token.address in defaultTokens));
+  const importTokensNotInDefault = urlLoadedTokens.filter(
+  (token): token is Token => token instanceof Token && !(token.address in defaultTokens)
+);
   const { account } = useActiveWeb3React();
   const theme = useContext(ThemeContext);
   const toggleWalletModal = useWalletModalToggle();
@@ -112,6 +114,13 @@ export default function Swap() {
       parsedAmounts[dependentField]?.toSignificant(6)
     ) {
       const formattedInputAmount = parsedAmounts[dependentField]?.toSignificant(6);
+      if (!formattedInputAmount) {
+        // Handle the error or return early if the amount is undefined
+        return {
+          [independentField]: typedValue,
+          [dependentField]: dependentTokenAmount,
+        };
+      }
       const originalAmount = ethers.utils.parseEther(formattedInputAmount);
       const formattedSwapFee = BigNumber.from(Math.ceil(swapFee * ONE_HUNDRED));
       const oneHundred = BigNumber.from(ONE_HUNDRED);
@@ -158,15 +167,23 @@ const handleAmountChange = (value: string, isFrom: boolean) => {
 
   const [isFromDropdownOpen, setIsFromDropdownOpen] = useState(false);
   const [isToDropdownOpen, setIsToDropdownOpen] = useState(false);
-  const fromDropdownRef = React.useRef();
-  const toDropdownRef = React.useRef();
+  const fromDropdownRef = React.useRef<HTMLElement>(null);
+  const toDropdownRef = React.useRef<HTMLElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (fromDropdownRef.current && !(fromDropdownRef.current as HTMLElement).contains(event.target as Node)) {
+      if (
+        fromDropdownRef.current &&
+        fromDropdownRef.current instanceof HTMLElement &&
+        !fromDropdownRef.current.contains(event.target as Node)
+      ) {
         setIsFromDropdownOpen(false);
       }
-      if (toDropdownRef.current && !(toDropdownRef.current as HTMLElement).contains(event.target as Node)) {
+      if (
+        toDropdownRef.current &&
+        toDropdownRef.current instanceof HTMLElement &&
+        !toDropdownRef.current.contains(event.target as Node)
+      ) {
         setIsToDropdownOpen(false);
       }
     };

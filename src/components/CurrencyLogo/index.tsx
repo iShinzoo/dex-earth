@@ -9,7 +9,7 @@ import useHttpLocations from '../../hooks/useHttpLocations';
 import { WrappedTokenInfo } from '../../state/lists/hooks';
 import Logo from '../Logo';
 import { useActiveWeb3React } from 'hooks';
-import { ChainIdChainName, Symbol } from '../../constants';
+import { chainId_ChainName, Symbol } from '../../constants/index';
 
 const getTokenLogoURL = (address: string) =>
   `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/${address}/logo.png`;
@@ -68,7 +68,7 @@ export default function CurrencyLogo({
 
   if (Symbol.includes(currency?.symbol as string)) {
     // eslint-disable-next-line @typescript-eslint/camelcase
-    const chainname = ChainIdChainName[chainId?.toString() as keyof typeof ChainIdChainName];
+    const chainname = chainId_ChainName[chainId?.toString() as keyof typeof chainId_ChainName];
     const imageLogo = `/images/${chainname}.png`;
     return <StyledEthereumLogo className="token" src={imageLogo} size={size} style={style} />;
   }

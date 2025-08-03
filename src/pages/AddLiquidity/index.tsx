@@ -1,17 +1,8 @@
 import { BigNumber } from '@ethersproject/bignumber';
 import { TransactionResponse } from '@ethersproject/providers';
-import { Currency, currencyEquals, ETHER, TokenAmount } from '@bidelity/sdk';
-import React, { useCallback, useEffect, useState } from 'react';
-import { NavLink, RouteComponentProps } from 'react-router-dom';
-import { Text } from 'rebass';
-import { ButtonError, ButtonPrimary, ButtonPrimarySmallerText } from '../../components/Button';
-import { AutoColumn } from '../../components/Column';
-import TransactionConfirmationModal, { ConfirmationModalContent } from '../../components/TransactionConfirmationModal';
-import CurrencyInputPanel from '../../components/CurrencyInputPanel';
-import { RowBetween } from '../../components/Row';
-import { PairState, usePair } from '../../data/Reserves';
+import { Currency, currencyEquals, ETHER, Pair, TokenAmount } from '@bidelity/sdk';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useActiveWeb3React } from '../../hooks';
-import { useCurrency } from '../../hooks/Tokens';
 import { ApprovalState, useApproveCallback } from '../../hooks/useApproveCallback';
 import useTransactionDeadline from '../../hooks/useTransactionDeadline';
 import {
@@ -25,52 +16,31 @@ import {
 } from '../../state/application/hooks';
 import { Field } from '../../state/mint/actions';
 import { useDerivedMintInfo, useMintActionHandlers, useMintState } from '../../state/mint/hooks';
-import styled from 'styled-components';
-
 import { useTransactionAdder } from '../../state/transactions/hooks';
 import { useIsExpertMode, useUserSlippageTolerance } from '../../state/user/hooks';
-import { TEXT, TYPE } from '../../theme';
 import { calculateGasMargin, calculateSlippageAmount, getRouterContract } from '../../utils';
 import { maxAmountSpend } from '../../utils/maxAmountSpend';
 import { wrappedCurrency } from '../../utils/wrappedCurrency';
-import { Dots, FlexAlign } from '../Pool/styleds';
-import { ConfirmAddModalBottom } from './ConfirmAddModalBottom';
-import { currencyId } from '../../utils/currencyId';
-import { PoolPriceBar } from './PoolPriceBar';
-import AmountTabs from '../../components/AmountTabs';
-import CurrencyLogo from '../../components/CurrencyLogo';
-import { truncateString } from '../../utils/truncateString';
-import { ApproveTokensModal, TransactionErrorModal } from './modals';
-import { MinimalPositionCard } from '../../components/PositionCard';
-import { useDerivedBurnInfo } from '../../state/burn/hooks';
-import { SuccessTransactionModal } from '../../components/swap/SuccessTransactionModal';
-import { useFindTokenAddress } from '../../state/swap/hooks';
-import { PAIRS_LOCK_QUERY } from './query';
 import { useQuery } from '@apollo/client';
-import { GreyCardSecondaryLight } from '../../components/Card';
+import { currencyId } from '../../utils/currencyId';
 import { isPairLocked } from '../../utils/isPairLocked';
 import useSetLiquidityTokensInUrl from '../../hooks/useSetLiquidityTokensInUrl';
-import Swapimage from '../../assets/images/swap.png';
-import Gs from 'theme/globalStyles';
-import Media from 'theme/media-breackpoint';
-import { getContractData, nativeSymbol, WETH } from '../../constants/index';
-import AskExpertsSection from '../../components/newHome/AskExpertsSection';
-import EarnPassiveIncomeSection from '../../components/newHome/EarnPassiveIncomeSection';
-
-const Addliquidity = styled.div``;
-const ALTop = styled.div`
-  margin-bottom: 20px;
-  width: 100%;
-  h3 {
-    margin: 0 0 8px;
-    font-weight: 600;
-    font-size: 24px;
-  }
-  p {
-    margin: 0;
-    font-size: 15px;
-  }
-`;
+import { PAIRS_LOCK_QUERY } from './query';
+import { useFindTokenAddress } from '../../state/swap/hooks';
+import { chainId_ChainName, getContractData, nativeSymbol, WETH } from '../../constants/index';
+import { Link, RouteComponentProps, useLocation } from 'react-router-dom';
+import { usePair } from '../../data/Reserves';
+import { useCurrency } from '../../hooks/Tokens';
+import TransactionConfirmationModal, { ConfirmationModalContent } from 'components/TransactionConfirmationModal';
+import { ApproveTokensModal, TransactionErrorModal } from './modals';
+import { SuccessTransactionModal } from 'components/swap/SuccessTransactionModal';
+import CurrencyInputPanel from 'components/CurrencyInputPanel';
+import AmountTabs from 'components/AmountTabs';
+import { MinimalPositionCard } from 'components/PositionCard';
+import { ConfirmAddModalBottom } from './ConfirmAddModalBottom';
+import { truncateString } from '../../utils/truncateString';
+import CurrencyLogo from '../../components/CurrencyLogo';
+import { Dots } from 'components/swap/styleds';
 
 export default function AddLiquidity({
   match: {
@@ -79,61 +49,46 @@ export default function AddLiquidity({
   history,
 }: RouteComponentProps<{ currencyIdA?: string; currencyIdB?: string }>) {
   const { account, chainId, library } = useActiveWeb3React();
-
   const { data: pairsList, refetch } = useQuery(PAIRS_LOCK_QUERY, { context: { clientName: chainId } });
   useEffect(() => {
     refetch();
   }, [chainId, refetch]);
 
   const usdtAddress = useFindTokenAddress('CFNC');
-  // CHANGE THIS IF NEEDED TODO. #VISHAL
-  // const usdtAddress = useFindTokenAddress('wUSDT');
-
   let currencyA = useCurrency(currencyIdA);
   let currencyB = useCurrency(currencyIdB);
+
+  // Local state for selected tokens
+  const [fromToken, setFromToken] = useState<Currency | null>(currencyA ?? null);
+  const [toToken, setToToken] = useState<Currency | null>(currencyB ?? null);
+
+  // Sync local state with URL/currencyId changes
+  useEffect(() => {
+    setFromToken(currencyA ?? null);
+    setToToken(currencyB ?? null);
+  }, [currencyA, currencyB]);
 
   useSetLiquidityTokensInUrl(currencyIdA, currencyIdB, usdtAddress, history);
 
   const USDT = useCurrency(usdtAddress);
-  const ETH = useCurrency(nativeSymbol[chainId ? chainId : 1]);
-
+  const ETH = useCurrency(nativeSymbol[chainId || 1]);
   currencyA = currencyA ?? USDT;
   currencyB = currencyB ?? ETH;
 
-  const toggleWalletModal = useWalletModalToggle(); // toggle wallet when disconnected
-
+  const toggleWalletModal = useWalletModalToggle();
   const expertMode = useIsExpertMode();
 
-  const { pair } = useDerivedBurnInfo(currencyA ?? undefined, currencyB ?? undefined);
-
-  const oneCurrencyIsWETH = Boolean(
-    chainId &&
-      ((currencyA && currencyEquals(WETH[chainId], currencyA)) ||
-        (currencyB && currencyEquals(WETH[chainId], currencyB)))
-  );
-
-  const isErrorModalOpen = useErrorModalOpen();
-  const toggleErrorModal = useErrorModalToggle();
-
-  const toggleSuccessModal = useSuccessModalToggle();
-  const isOpenSuccessModal = useSuccessModalOpen();
-
-  const isApproveTokensModalOpen = useApproveTokensModalOpen();
-  const toggleApproveTokensModal = useApproveTokensModalToggle();
-
-  // mint state
-  const { independentField, typedValue, otherTypedValue } = useMintState();
+  // Mint state
+  const { independentField, typedValue } = useMintState();
   const {
     dependentField,
     currencies,
-    pairState,
     currencyBalances,
     parsedAmounts,
-    price,
     noLiquidity,
     liquidityMinted,
     poolTokenPercentage,
-    error,
+    error: mintError,
   } = useDerivedMintInfo(currencyA ?? undefined, currencyB ?? undefined);
 
   const { onFieldAInput, onFieldBInput, onSwitchMintCurrencies } = useMintActionHandlers(noLiquidity);
@@ -143,84 +98,130 @@ export default function AddLiquidity({
       onFieldAInput('');
       onFieldBInput('');
     };
-  }, [onFieldBInput, onFieldAInput]);
+  }, [onFieldAInput, onFieldBInput]);
 
-  const isValid = !error;
+  // Max amounts
+  const maxAmounts = useMemo(
+    () => ({
+      [Field.CURRENCY_A]: maxAmountSpend(currencyBalances[Field.CURRENCY_A]),
+      [Field.CURRENCY_B]: maxAmountSpend(currencyBalances[Field.CURRENCY_B]),
+    }),
+    [currencyBalances]
+  );
 
-  // modal and loading
-  const [showConfirm, setShowConfirm] = useState<boolean>(false);
-  const [attemptingTxn, setAttemptingTxn] = useState<boolean>(false); // clicked confirm
-
-  // txn values
-  const deadline = useTransactionDeadline(); // custom from users settings
-  const [allowedSlippage] = useUserSlippageTolerance(); // custom from users
-  const [txHash, setTxHash] = useState<string>('');
-
-  // get formatted amounts
-  const formattedAmounts = {
-    [independentField]: typedValue,
-    [dependentField]: noLiquidity ? otherTypedValue : parsedAmounts[dependentField]?.toSignificant(6) ?? '',
+  const atMaxAmounts = {
+    [Field.CURRENCY_A]: maxAmounts[Field.CURRENCY_A]?.equalTo(parsedAmounts[Field.CURRENCY_A] ?? '0'),
+    [Field.CURRENCY_B]: maxAmounts[Field.CURRENCY_B]?.equalTo(parsedAmounts[Field.CURRENCY_B] ?? '0'),
   };
-
-  // get the max amounts user can add
-  const maxAmounts: { [field in Field]?: TokenAmount } = [Field.CURRENCY_A, Field.CURRENCY_B].reduce(
-    (accumulator, field) => {
-      return {
-        ...accumulator,
-        [field]: maxAmountSpend(currencyBalances[field]),
-      };
-    },
-    {}
-  );
-
-  const atMaxAmounts: { [field in Field]?: TokenAmount } = [Field.CURRENCY_A, Field.CURRENCY_B].reduce(
-    (accumulator, field) => {
-      return {
-        ...accumulator,
-        [field]: maxAmounts[field]?.equalTo(parsedAmounts[field] ?? '0'),
-      };
-    },
-    {}
-  );
 
   const contractData = getContractData(chainId as any);
   const ROUTER_CONTRACT_ADDRESS = contractData.ROUTER_ADDRESS;
 
-  // check whether the user has approved the router on the tokens
+  // Approvals
   const [approvalA, approveACallback] = useApproveCallback(parsedAmounts[Field.CURRENCY_A], ROUTER_CONTRACT_ADDRESS);
   const [approvalB, approveBCallback] = useApproveCallback(parsedAmounts[Field.CURRENCY_B], ROUTER_CONTRACT_ADDRESS);
+
+  const deadline = useTransactionDeadline();
+  const [allowedSlippage] = useUserSlippageTolerance();
+
+  // Modals
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [attemptingTxn, setAttemptingTxn] = useState(false);
+  const [txHash, setTxHash] = useState('');
+  const isErrorModalOpen = useErrorModalOpen();
+  const toggleErrorModal = useErrorModalToggle();
+  const isSuccessModalOpen = useSuccessModalOpen();
+  const toggleSuccessModal = useSuccessModalToggle();
+  const isApproveTokensModalOpen = useApproveTokensModalOpen();
+  const toggleApproveTokensModal = useApproveTokensModalToggle();
 
   const addTransaction = useTransactionAdder();
 
   const handleDismissConfirmation = useCallback(() => {
     setShowConfirm(false);
-    // if there was a tx hash, we want to clear the input
-    if (txHash) {
-      onFieldAInput('');
-    }
-    // setTxHash('');
+    if (txHash) onFieldAInput('');
   }, [onFieldAInput, txHash]);
 
-  const handleASwitchCurrencies = useCallback(() => {
-    if (!currencyIdA && !currencyIdB) {
-      return;
-    }
+  const toggleSuccess = () => {
+    setTxHash('');
+    setShowConfirm(false);
+    toggleSuccessModal();
+  };
+
+  // Handle currency selection
+  const handleCurrencyASelect = useCallback(
+    (currency: Currency) => {
+      setFromToken(currency);
+      const newIdA = currencyId(currency, chainId || 1);
+      if (newIdA === currencyIdB) {
+        history.push(`/add/${currencyIdB}/${currencyIdA}`);
+      } else {
+        history.push(`/add/${newIdA}/${currencyIdB}`);
+      }
+    },
+    [currencyIdB, history, currencyIdA, chainId]
+  );
+
+  const handleCurrencyBSelect = useCallback(
+    (currency: Currency) => {
+      setToToken(currency);
+      const newIdB = currencyId(currency, chainId || 1);
+      if (currencyIdA === newIdB) {
+        history.push(`/add/${currencyIdB}/${newIdB}`);
+      } else {
+        history.push(`/add/${currencyIdA || nativeSymbol[chainId || 1]}/${newIdB}`);
+      }
+    },
+    [currencyIdA, history, currencyIdB, chainId]
+  );
+
+  const handleSwitchTokens = () => {
     history.push(`/add/${currencyIdB}/${currencyIdA}`);
     onSwitchMintCurrencies();
-  }, [currencyIdA, currencyIdB, history, onSwitchMintCurrencies]);
+  };
 
+  // Max buttons
   const handleMaxA = useCallback(() => {
-    maxAmounts[Field.CURRENCY_A] && onFieldAInput(maxAmounts[Field.CURRENCY_A]?.toExact() ?? '');
+    const value = maxAmounts[Field.CURRENCY_A]?.toExact();
+    if (value !== undefined) {
+      onFieldAInput(value);
+    }
   }, [maxAmounts, onFieldAInput]);
 
   const handleMaxB = useCallback(() => {
-    maxAmounts[Field.CURRENCY_B] && onFieldBInput(maxAmounts[Field.CURRENCY_B]?.toExact() ?? '');
+    const value = maxAmounts[Field.CURRENCY_B]?.toExact();
+    if (value !== undefined) {
+      onFieldBInput(value);
+    }
   }, [maxAmounts, onFieldBInput]);
 
+  // Percent-based input handlers
+  const handleMaxFieldAAmount = useCallback(
+    (percent: number) => {
+      const amount = maxAmounts[Field.CURRENCY_A];
+      if (amount) {
+        const value = (parseFloat(amount.toExact()) * percent) / 100;
+        onFieldAInput(value.toString());
+      }
+    },
+    [maxAmounts, onFieldAInput]
+  );
+
+  const handleMaxFieldBAmount = useCallback(
+    (percent: number) => {
+      const amount = maxAmounts[Field.CURRENCY_B];
+      if (amount) {
+        const value = (parseFloat(amount.toExact()) * percent) / 100;
+        onFieldBInput(value.toString());
+      }
+    },
+    [maxAmounts, onFieldBInput]
+  );
+
+  // Add liquidity
   async function onAdd() {
     if (!chainId || !library || !account) return;
     const router = getRouterContract(chainId, library, account);
-
     const { [Field.CURRENCY_A]: parsedAmountA, [Field.CURRENCY_B]: parsedAmountB } = parsedAmounts;
     if (!parsedAmountA || !parsedAmountB || !currencyA || !currencyB || !deadline) {
       return;
@@ -235,15 +236,16 @@ export default function AddLiquidity({
       method: (...args: any) => Promise<TransactionResponse>,
       args: Array<string | string[] | number>,
       value: BigNumber | null;
+
     if (currencyA === ETHER || currencyB === ETHER) {
       const tokenBIsETH = currencyB === ETHER;
       estimate = router.estimateGas.addLiquidityETH;
       method = router.addLiquidityETH;
       args = [
-        wrappedCurrency(tokenBIsETH ? currencyA : currencyB, chainId)?.address ?? '', // token
-        (tokenBIsETH ? parsedAmountA : parsedAmountB).raw.toString(), // token desired
-        amountsMin[tokenBIsETH ? Field.CURRENCY_A : Field.CURRENCY_B].toString(), // token min
-        amountsMin[tokenBIsETH ? Field.CURRENCY_B : Field.CURRENCY_A].toString(), // eth min
+        wrappedCurrency(tokenBIsETH ? currencyA : currencyB, chainId)?.address ?? '',
+        (tokenBIsETH ? parsedAmountA : parsedAmountB).raw.toString(),
+        amountsMin[tokenBIsETH ? Field.CURRENCY_A : Field.CURRENCY_B].toString(),
+        amountsMin[tokenBIsETH ? Field.CURRENCY_B : Field.CURRENCY_A].toString(),
         account,
         deadline.toHexString(),
       ];
@@ -266,407 +268,293 @@ export default function AddLiquidity({
 
     setAttemptingTxn(true);
     await estimate(...args, value ? { value } : {})
-      .then((estimatedGasLimit) =>
+      .then((gasEstimate) =>
         method(...args, {
           ...(value ? { value } : {}),
-          gasLimit: calculateGasMargin(estimatedGasLimit),
-        }).then((response) => {
+          gasLimit: calculateGasMargin(gasEstimate),
+        }).then((response: TransactionResponse) => {
           setAttemptingTxn(false);
-
           addTransaction(response, {
-            summary:
-              'Add ' +
-              parsedAmounts[Field.CURRENCY_A]?.toSignificant(3) +
-              ' ' +
-              currencies[Field.CURRENCY_A]?.symbol +
-              ' and ' +
-              parsedAmounts[Field.CURRENCY_B]?.toSignificant(3) +
-              ' ' +
-              currencies[Field.CURRENCY_B]?.symbol,
+            summary: `Add ${parsedAmountA.toSignificant(3)} ${
+              currencies[Field.CURRENCY_A]?.symbol
+            } and ${parsedAmountB.toSignificant(3)} ${currencies[Field.CURRENCY_B]?.symbol}`,
           });
           setTxHash(response.hash);
         })
       )
       .catch((error) => {
         setAttemptingTxn(false);
+        console.error('Add liquidity error:', error);
         handleDismissConfirmation();
         toggleErrorModal();
       });
   }
 
-  const modalHeader = () => {
-    return noLiquidity ? (
-      <AutoColumn gap="6px">
-        <FlexAlign>
-          <TEXT.primary fontSize={12} fontWeight={500}>
-            {currencies[Field.CURRENCY_A]?.symbol + ' / ' + currencies[Field.CURRENCY_B]?.symbol}
-          </TEXT.primary>
-          <FlexAlign style={{ marginLeft: '8px' }}>
-            <CurrencyLogo currency={currencies[Field.CURRENCY_A]} />
-          </FlexAlign>
-          <FlexAlign style={{ marginLeft: '8px' }}>
-            <CurrencyLogo currency={currencies[Field.CURRENCY_B]} />
-          </FlexAlign>
-        </FlexAlign>
-      </AutoColumn>
-    ) : (
-      <AutoColumn gap="6px">
-        <FlexAlign>
-          <TEXT.primary fontWeight={700} fontSize={22}>
+  // Modal content
+  const modalHeader = () => (
+    <div className="text-center">
+      {noLiquidity ? (
+        <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+          <span>
+            {currencies[Field.CURRENCY_A]?.symbol} / {currencies[Field.CURRENCY_B]?.symbol}
+          </span>
+          <div className="flex space-x-1">
+            <CurrencyLogo currency={currencies[Field.CURRENCY_A]} size="16px" />
+            <CurrencyLogo currency={currencies[Field.CURRENCY_B]} size="16px" />
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="text-xl font-bold text-green-500">
             {truncateString(liquidityMinted?.toSignificant(6), 16)}
-          </TEXT.primary>
-          <FlexAlign style={{ marginLeft: '8px' }}>
-            <CurrencyLogo currency={currencies[Field.CURRENCY_A]} />
-          </FlexAlign>
-          <FlexAlign style={{ marginLeft: '8px' }}>
-            <CurrencyLogo currency={currencies[Field.CURRENCY_B]} />
-          </FlexAlign>
-        </FlexAlign>
-        <TEXT.primary fontSize={12} fontWeight={500}>
-          {currencies[Field.CURRENCY_A]?.symbol + ' / ' + currencies[Field.CURRENCY_B]?.symbol + ' Pool Tokens'}
-        </TEXT.primary>
-      </AutoColumn>
-    );
-  };
-
-  const modalBottom = () => {
-    return (
-      <ConfirmAddModalBottom
-        price={price}
-        currencies={currencies}
-        parsedAmounts={parsedAmounts}
-        noLiquidity={noLiquidity}
-        onAdd={onAdd}
-        poolTokenPercentage={poolTokenPercentage}
-      />
-    );
-  };
+          </div>
+          <div className="text-sm text-gray-500 flex items-center justify-center space-x-1 mt-1">
+            <span>
+              {currencies[Field.CURRENCY_A]?.symbol}/{currencies[Field.CURRENCY_B]?.symbol} Pool Tokens
+            </span>
+            <CurrencyLogo currency={currencies[Field.CURRENCY_A]} size="16px" />
+            <CurrencyLogo currency={currencies[Field.CURRENCY_B]} size="16px" />
+          </div>
+        </>
+      )}
+    </div>
+  );
 
   const pendingText = `Supplying ${parsedAmounts[Field.CURRENCY_A]?.toSignificant(6)} ${
     currencies[Field.CURRENCY_A]?.symbol
   } and ${parsedAmounts[Field.CURRENCY_B]?.toSignificant(6)} ${currencies[Field.CURRENCY_B]?.symbol}`;
 
-  const pendingContent = () => {
-    return (
-      <TEXT.default fontWeight={600} fontSize={14} color="textPrimary" textAlign="center">
-        Supplying{' '}
-        <TEXT.default color="primary1" display="inline">
-          {parsedAmounts[Field.CURRENCY_A]?.toSignificant(6)} {currencies[Field.CURRENCY_A]?.symbol}
-        </TEXT.default>{' '}
-        and{' '}
-        <TEXT.default color="primary1" display="inline">
-          {parsedAmounts[Field.CURRENCY_B]?.toSignificant(6)} {currencies[Field.CURRENCY_B]?.symbol}
-        </TEXT.default>
-      </TEXT.default>
-    );
-  };
-
-  const handleCurrencyASelect = useCallback(
-    (currencyA: Currency) => {
-      const newCurrencyIdA = currencyId(currencyA, chainId || 1);
-      if (newCurrencyIdA === currencyIdB) {
-        history.push(`/add/${currencyIdB}/${currencyIdA}`);
-      } else {
-        history.push(`/add/${newCurrencyIdA}/${currencyIdB}`);
-      }
-    },
-    [currencyIdB, history, currencyIdA, chainId]
-  );
-  const handleCurrencyBSelect = useCallback(
-    (currencyB: Currency) => {
-      const newCurrencyIdB = currencyId(currencyB, chainId || 1);
-      if (currencyIdA === newCurrencyIdB) {
-        if (currencyIdB) {
-          history.push(`/add/${currencyIdB}/${newCurrencyIdB}`);
-        } else {
-          history.push(`/add/${newCurrencyIdB}`);
-        }
-      } else {
-        history.push(`/add/${currencyIdA ? currencyIdA : nativeSymbol[chainId || 1]}/${newCurrencyIdB}`);
-      }
-    },
-    [currencyIdA, history, currencyIdB, chainId]
+  const pendingContent = () => (
+    <div className="text-center">
+      Supplying{' '}
+      <span className="text-green-500 font-medium">
+        {parsedAmounts[Field.CURRENCY_A]?.toSignificant(6)} {currencies[Field.CURRENCY_A]?.symbol}
+      </span>{' '}
+      and{' '}
+      <span className="text-green-500 font-medium">
+        {parsedAmounts[Field.CURRENCY_B]?.toSignificant(6)} {currencies[Field.CURRENCY_B]?.symbol}
+      </span>
+    </div>
   );
 
-  const v2Pair = usePair(currencyA ? currencyA : undefined, currencyB ? currencyB : undefined);
+  const modalBottom = () => (
+    <ConfirmAddModalBottom
+      price={undefined}
+      currencies={currencies}
+      parsedAmounts={parsedAmounts}
+      noLiquidity={noLiquidity}
+      onAdd={onAdd}
+      poolTokenPercentage={poolTokenPercentage}
+    />
+  );
 
-  const toggleSuccess = () => {
-    setTxHash('');
-    setShowConfirm(false);
-    toggleSuccessModal();
-  };
+  // Pair & Lock
+  const [pairState, pair] = usePair(currencyA ?? undefined, currencyB ?? undefined);
+  const isLocked = pairsList?.pairs && pair ? isPairLocked(pairsList.pairs, pair) : false;
 
-  const isLocked = pairsList && pairsList?.pairs && pair ? isPairLocked(pairsList.pairs, pair) : false;
+  // LP Card
+  const oneCurrencyIsWETH = Boolean(
+    chainId &&
+      currencyA &&
+      currencyB &&
+      (currencyEquals(WETH[chainId], currencyA) || currencyEquals(WETH[chainId], currencyB))
+  );
+
+  const location = useLocation();
+  const isPoolTabActive =
+    location.pathname.match(/\/pool$/) ||
+    location.pathname.includes('/add') ||
+    location.pathname.includes('/remove') ||
+    location.pathname.includes('pools:list');
+
+  const isMintValid = !mintError;
+  const isApproved = approvalA === ApprovalState.APPROVED && approvalB === ApprovalState.APPROVED;
 
   return (
-    <div>
-      {/* Hero Section */}
-      <div className="hero-section">
-        <div className="flex-grow flex flex-col items-center px-4 pt-[40px] md:pt-[88px] container mx-auto w-full">
-          <button
-            aria-label="Join our community"
-            className="flex items-center gap-4 text-black font-normal text-[14.29px] leading-[15.84px] bg-white border border-[#eaeaea] rounded-full px-[15px] py-2 mb-5 transition"
+    <div className="hero-border mt-[100px] mb-[150px] w-full p-[3.5px] md:rounded-[40px] rounded-[20px]">
+      <div className="bg-[linear-gradient(105.87deg,_rgba(0,0,0,0.2)_3.04%,_rgba(0,0,0,0)_96.05%)] relative backdrop-blur-[80px] w-full md:rounded-[40px] rounded-[20px] px-[15px] md:px-[50px] py-[20px] md:py-[60px]">
+        <div className="relative z-10 border bg-[#FFFFFF66] inline-flex px-2 py-1.5 rounded-[14px] border-solid border-[#FFFFFF1A] mb-6 gap-2">
+          <Link
+            to="/swap"
+            className="rounded-[8px] text-black font-normal text-sm leading-[100%] px-[22px] py-[13px] cursor-pointer"
           >
-            <span>⚡</span>
-            <span>Join our community</span>
-            
-          </button>
-          <h1 className="font-semibold text-[40px] leading-[48px] md:text-[80px] md:leading-[88px] text-center align-middle capitalize mb-3 text-[#3DBEA3] max-w-[720px] mx-auto">
-            <span className="text-[#2A8576]"> Tokens </span> Exchange with DEX.
-          </h1>
-          <p className="text-center font-normal md:text-[17.72px] md:leading-7 text-[#767676] max-w-[700px] mb-6">
-            At our cryptocurrency token exchange platform, we offer an easy-to-use token swap service that allows you to
-            seamlessly exchange one type of token for another with maximum efficiency.
-          </p>
+            Exchange
+          </Link>
+          <Link
+            to="/pool"
+            className="rounded-[8px] bg-white text-[#2A8576] font-bold text-sm leading-[100%] px-[22px] py-[13px] cursor-pointer"
+          >
+            Pool
+          </Link>
+        </div>
 
-          <div className="flex items-center justify-center py-8">
-            <div className="w-full flex justify-center px-2">
-              <div
-                className="hero-border w-[80vw] max-w-4xl p-[3.5px] rounded-[20px]"
-                style={{
-                  background: `radial-gradient(98% 49.86% at 100.03% 100%, #33a36d 0%, rgba(51, 163, 109, 0.05) 100%), \
-                        radial-gradient(24.21% 39.21% at 0% 0%, rgba(255, 255, 255, 0.81) 0%, rgba(255, 255, 255, 0.19) 100%), \
-                        radial-gradient(21.19% 40.1% at 100.03% 0%, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0) 100%)`,
-                }}
-              >
-                <div className="bg-[linear-gradient(105.87deg,rgba(0,0,0,0.3)_3.04%,rgba(0,0,0,0.1)_96.05%)] relative backdrop-blur-[80px] w-full rounded-[20px] px-4 py-6">
-                  <div className="relative z-10 border bg-[#FFFFFF66] inline-flex px-2 py-1.5 rounded-[14px] border-solid border-[#FFFFFF1A] gap-2 mb-6">
-                    <button
-                      onClick={() => history.push('/swap')}
-                      className={`rounded-[8px] font-normal text-sm leading-[100%] px-[22px] py-[13px] transition-colors ${
-                        history.location.pathname === '/swap' ? 'bg-white text-[#2A8576] font-bold' : 'text-black'
-                      }`}
-                    >
-                      Exchange
-                    </button>
-                    <button
-                      onClick={() => history.push('/pool')}
-                      className={`rounded-[8px] font-normal text-sm leading-[100%] px-[22px] py-[13px] transition-colors ${
-                        history.location.pathname === '/pool' ? 'bg-white text-[#2A8576] font-bold' : 'text-black'
-                      }`}
-                    >
-                      Pool
-                    </button>
-                  </div>
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col md:flex-row items-center gap-[25px] md:gap-[51px]">
+            {/* Currency A */}
+            <div className="flex-1 w-full">
+              <CurrencyInputPanel
+                label="From"
+                label2={
+                  maxAmounts[Field.CURRENCY_A]?.toExact()
+                    ? `Availability: ${parseFloat(maxAmounts[Field.CURRENCY_A]?.toExact() || '0').toFixed(4)}`
+                    : ''
+                }
+                value={
+                  independentField === Field.CURRENCY_A
+                    ? typedValue
+                    : parsedAmounts[Field.CURRENCY_B]?.toSignificant(6) || ''
+                }
+                onUserInput={(value) => onFieldAInput(value)}
+                onCurrencySelect={handleCurrencyASelect}
+                currency={fromToken ?? currencies[Field.CURRENCY_A]}
+                otherCurrency={toToken ?? currencies[Field.CURRENCY_B]}
+                id="add-liquidity-input-tokena"
+                showMaxButton={!atMaxAmounts[Field.CURRENCY_A]}
+                onMax={handleMaxA}
+                showCommonBases
+              />
+              <AmountTabs onChange={handleMaxFieldAAmount} />
+            </div>
 
-                  <h2 className="mb-1 font-bold text-2xl leading-[100%] text-white">Add Liquidity</h2>
-                  <p className="text-white font-normal text-base leading-5 mb-6">Add Liquidity to receive LP Tokens</p>
-
-                  {/* Show available balances for selected tokens above each input */}
-
-                  {/* Horizontal input cards with swap icon in center */}
-                  <div className="flex flex-row items-start justify-between gap-4 mb-4 w-full">
-                    {/* First input card */}
-                    <div className="flex-1 bg-[#FFFFFF66] border border-[#FFFFFF66] rounded-[12px] px-4 py-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <input
-                          type="number"
-                          className="bg-transparent outline-none font-bold text-2xl w-1/2"
-                          value={formattedAmounts[Field.CURRENCY_A]}
-                          onChange={(e) => onFieldAInput(e.target.value)}
-                          placeholder="0.000"
-                        />
-                        <div className="flex items-center gap-2 bg-[#FFFFFF66] rounded px-2 py-1">
-                          {/* Optionally add token icon here if available */}
-                          
-                          <select
-                            className="font-semibold text-sm text-[#767676] bg-transparent outline-none"
-                            value={
-                              'address' in (currencies[Field.CURRENCY_A] || {})
-                                ? (currencies[Field.CURRENCY_A] as any).address
-                                : currencies[Field.CURRENCY_A]?.symbol || ''
-                            }
-                            onChange={(e) => {
-                              const selected = Object.values(currencies).find(
-                                (t: any) =>
-                                  t &&
-                                  (('address' in t && t.address === e.target.value) ||
-                                    (!('address' in t) && t.symbol === e.target.value))
-                              );
-                              if (selected) handleCurrencyASelect(selected);
-                            }}
-                          >
-                            {Object.values(currencies).map(
-                              (t: any) =>
-                                t && (
-                                  <option key={t.address} value={t.address}>
-                                    {t.symbol}
-                                  </option>
-                                )
-                            )}
-                          </select>
-                        </div>
-                      </div>
-                      <div className="text-xs text-[#767676] mb-2">
-                        Balance: {currencyBalances[Field.CURRENCY_A]?.toSignificant(6) ?? '0.0000'}
-                      </div>
-                      <div className="flex justify-between mt-2">
-                        {[25, 50, 75, 100].map((percent) => (
-                          <button
-                            key={percent}
-                            className="text-[#767676] font-semibold text-xs px-2 py-1 rounded hover:bg-[#e0f7f4]"
-                            onClick={() =>
-                              onFieldAInput(
-                                (
-                                  (parseFloat(currencyBalances[Field.CURRENCY_A]?.toExact() || '0') * percent) /
-                                  100
-                                ).toString()
-                              )
-                            }
-                          >
-                            {percent}%
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Swap icon */}
-                    <div className="flex flex-col items-center justify-center h-full pt-8">
-                      <button
-                        className="bg-[#FFFFFF66] border border-[#E0E0E0] rounded-full p-2 shadow hover:bg-[#e0f7f4] transition-colors"
-                        style={{ marginBottom: '0.5rem' }}
-                        title="Swap tokens"
-                        onClick={handleASwitchCurrencies}
-                      >
-                        <svg width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path
-                            d="M8 14h12M16 10l4 4-4 4"
-                            stroke="#3DBEA3"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-
-                    {/* Second input card */}
-                    <div className="flex-1 bg-[#FFFFFF66] border border-[#E0E0E0] rounded-[12px] px-4 py-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <input
-                          type="number"
-                          className="bg-transparent outline-none font-bold text-2xl w-1/2"
-                          value={formattedAmounts[Field.CURRENCY_B]}
-                          onChange={(e) => onFieldBInput(e.target.value)}
-                          placeholder="0.000"
-                        />
-                        <div className="flex items-center gap-2 bg-[#FFFFFF66] rounded px-2 py-1">
-                          {/* Optionally add token icon here if available */}
-                          <span className="font-semibold text-sm">{currencies[Field.CURRENCY_B]?.symbol}</span>
-                          <select
-                            className="font-semibold text-sm text-[#767676] bg-transparent outline-none"
-                            value={
-                              'address' in (currencies[Field.CURRENCY_B] || {})
-                                ? (currencies[Field.CURRENCY_B] as any).address
-                                : currencies[Field.CURRENCY_B]?.symbol || ''
-                            }
-                            onChange={(e) => {
-                              const selected = Object.values(currencies).find(
-                                (t: any) =>
-                                  t &&
-                                  (('address' in t && t.address === e.target.value) ||
-                                    (!('address' in t) && t.symbol === e.target.value))
-                              );
-                              if (selected) handleCurrencyBSelect(selected);
-                            }}
-                          >
-                            {Object.values(currencies).map(
-                              (t: any) =>
-                                t && (
-                                  <option key={t.address} value={t.address}>
-                                    {t.symbol}
-                                  </option>
-                                )
-                            )}
-                          </select>
-                        </div>
-                        <span className="ml-2 text-xs text-[#3DBEA3] font-bold cursor-pointer" onClick={handleMaxB}>
-                          MAX
-                        </span>
-                      </div>
-                      <div className="text-xs text-[#767676] mb-2">
-                        Balance: {currencyBalances[Field.CURRENCY_B]?.toSignificant(6) ?? '0.0000'}
-                      </div>
-                      <div className="flex justify-between mt-2">
-                        {[25, 50, 75, 100].map((percent) => (
-                          <button
-                            key={percent}
-                            className="text-[#767676] font-semibold text-xs px-2 py-1 rounded hover:bg-[#e0f7f4]"
-                            onClick={() =>
-                              onFieldBInput(
-                                (
-                                  (parseFloat(currencyBalances[Field.CURRENCY_B]?.toExact() || '0') * percent) /
-                                  100
-                                ).toString()
-                              )
-                            }
-                          >
-                            {percent}%
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Prices and pool share card */}
-                  <div className="bg-[#FFFFFF66] border border-[#E0E0E0] rounded-[12px] px-4 py-4 mb-4">
-                    <p className="font-bold text-sm mb-2">Prices and pool share:</p>
-                    <PoolPriceBar
-                      currencies={currencies}
-                      poolTokenPercentage={poolTokenPercentage}
-                      noLiquidity={noLiquidity}
-                      price={price}
-                    />
-                  </div>
-
-                  {/* Enter an Amount button (disabled) */}
-                  <button
-                    className="w-full bg-[#3DBEA3] text-[#767676] font-semibold text-lg rounded-[8px] py-3 mb-4 cursor-not-allowed"
-                    disabled
-                  >
-                    Enter an Amount
-                  </button>
-
-                  {/* Modals and logic components (hidden in new UI, but logic should be preserved) */}
-                  <SuccessTransactionModal
-                    hash={txHash !== '' ? txHash : undefined}
-                    isOpen={isOpenSuccessModal}
-                    onDismiss={toggleSuccess}
+            <div>
+              <button onClick={handleSwitchTokens} className="hover:bg-gray-100 p-2 rounded-full transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="29" fill="none">
+                  <path
+                    fill="#000"
+                    d="M19.876.5H8.138C3.04.5 0 3.538 0 8.634v11.718c0 5.11 3.04 8.148 8.138 8.148h11.724C24.96 28.5 28 25.462 28 20.366V8.634C28.014 3.538 24.974.5 19.876.5Zm-7.284 21c0 .14-.028.266-.084.406a1.095 1.095 0 0 1-.574.574 1.005 1.005 0 0 1-.406.084 1.056 1.056 0 0 1-.743-.308l-4.132-4.13a1.056 1.056 0 0 1 0-1.484 1.057 1.057 0 0 1 1.485 0l2.34 2.338V7.5c0-.574.476-1.05 1.05-1.05.574 0 1.064.476 1.064 1.05v14Zm8.755-9.128a1.04 1.04 0 0 1-.743.308 1.04 1.04 0 0 1-.742-.308l-2.34-2.338V21.5c0 .574-.475 1.05-1.05 1.05-.574 0-1.05-.476-1.05-1.05v-14c0-.14.028-.266.084-.406.112-.252.308-.462.574-.574a.99.99 0 0 1 .798 0c.127.056.238.126.337.224l4.132 4.13c.406.42.406 1.092 0 1.498Z"
                   />
-                  <TransactionConfirmationModal
-                    isOpen={showConfirm}
-                    onDismiss={handleDismissConfirmation}
-                    attemptingTxn={attemptingTxn}
-                    hash={txHash}
-                    isAddLiquidityPage={true}
-                    pair={pair}
-                    v2pair={v2Pair}
-                    content={() => (
-                      <ConfirmationModalContent
-                        title={noLiquidity ? 'You are creating a pool' : 'You will receive'}
-                        onDismiss={handleDismissConfirmation}
-                        topContent={modalHeader}
-                        bottomContent={modalBottom}
-                      />
-                    )}
-                    pendingText={pendingText}
-                    pendingContent={pendingContent}
-                  />
-                  <TransactionErrorModal isOpen={isErrorModalOpen} onDismiss={toggleErrorModal} />
-                  <ApproveTokensModal
-                    isOpen={isApproveTokensModalOpen}
-                    onDismiss={toggleApproveTokensModal}
-                    pendingText={pendingText}
-                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* Currency B */}
+            <div className="flex-1 w-full">
+              <CurrencyInputPanel
+                label="To"
+                label2={
+                  maxAmounts[Field.CURRENCY_B]?.toExact()
+                    ? `Availability: ${parseFloat(maxAmounts[Field.CURRENCY_B]?.toExact() || '0').toFixed(4)}`
+                    : ''
+                }
+                value={
+                  independentField === Field.CURRENCY_B
+                    ? typedValue
+                    : parsedAmounts[Field.CURRENCY_A]?.toSignificant(6) || ''
+                }
+                onUserInput={(value) => onFieldBInput(value)}
+                onCurrencySelect={handleCurrencyBSelect}
+                currency={toToken ?? currencies[Field.CURRENCY_B]}
+                otherCurrency={fromToken ?? currencies[Field.CURRENCY_A]}
+                id="add-liquidity-input-tokenb"
+                showMaxButton={!atMaxAmounts[Field.CURRENCY_B]}
+                onMax={handleMaxB}
+                showCommonBases
+              />
+              <AmountTabs onChange={handleMaxFieldBAmount} />
+            </div>
+          </div>
+
+          {/* Pool Stats */}
+          {pair && (
+            <div className="bg-white rounded-lg p-4 mt-4">
+              <div className="flex justify-between text-sm text-gray-500">
+                <div>
+                  <span>Pool Share</span>
+                  <div className="font-medium text-gray-900">{poolTokenPercentage?.toSignificant(4)}%</div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Approval Buttons */}
+          {account && !isLocked && !isApproved && isMintValid && (
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              {approvalA !== ApprovalState.APPROVED && (
+                <button
+                  onClick={approveACallback}
+                  disabled={approvalA === ApprovalState.PENDING}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {approvalA === ApprovalState.PENDING ? (
+                    <Dots>Approving {currencies[Field.CURRENCY_A]?.symbol}</Dots>
+                  ) : (
+                    `Approve ${currencies[Field.CURRENCY_A]?.symbol}`
+                  )}
+                </button>
+              )}
+              {approvalB !== ApprovalState.APPROVED && (
+                <button
+                  onClick={approveBCallback}
+                  disabled={approvalB === ApprovalState.PENDING}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {approvalB === ApprovalState.PENDING ? (
+                    <Dots>Approving {currencies[Field.CURRENCY_B]?.symbol}</Dots>
+                  ) : (
+                    `Approve ${currencies[Field.CURRENCY_B]?.symbol}`
+                  )}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Supply Button */}
+          <button
+            className={`w-full mt-4 px-4 py-2 rounded-lg text-white font-medium ${
+              isMintValid && isApproved && !isLocked
+                ? 'bg-green-500 hover:bg-green-600'
+                : 'bg-gray-300 cursor-not-allowed'
+            }`}
+            onClick={() => {
+              if (!account) return toggleWalletModal();
+              if (isLocked) return;
+              if (!isApproved) return toggleApproveTokensModal();
+              expertMode ? onAdd() : setShowConfirm(true);
+            }}
+            disabled={!isMintValid || !isApproved || isLocked || !account}
+          >
+            {isLocked ? 'Pair Locked' : !account ? 'Connect Wallet' : mintError ?? 'Supply'}
+          </button>
+
+          {/* LP Position Card */}
+          {pair && (
+            <div className="mt-6">
+              <MinimalPositionCard showUnwrapped={oneCurrencyIsWETH} pair={pair} />
+            </div>
+          )}
         </div>
+
+        {/* Modals */}
+        <TransactionConfirmationModal
+          isOpen={showConfirm}
+          onDismiss={handleDismissConfirmation}
+          attemptingTxn={attemptingTxn}
+          hash={txHash}
+          isAddLiquidityPage={true}
+          pair={pair}
+          content={() => (
+            <ConfirmationModalContent
+              title={noLiquidity ? 'Creating Pool' : 'You will receive'}
+              onDismiss={handleDismissConfirmation}
+              topContent={modalHeader}
+              bottomContent={modalBottom}
+            />
+          )}
+          pendingText={pendingText}
+          pendingContent={pendingContent}
+        />
+        <TransactionErrorModal isOpen={isErrorModalOpen} onDismiss={toggleErrorModal} />
+        <ApproveTokensModal
+          isOpen={isApproveTokensModalOpen}
+          onDismiss={toggleApproveTokensModal}
+          pendingText={pendingText}
+        />
+        <SuccessTransactionModal
+          hash={txHash ? txHash : undefined}
+          isOpen={isSuccessModalOpen}
+          onDismiss={toggleSuccess}
+        />
       </div>
-      <AskExpertsSection />
-      <EarnPassiveIncomeSection />
     </div>
   );
 }
-

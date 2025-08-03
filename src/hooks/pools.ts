@@ -4,7 +4,7 @@ import { PAIR_INTERFACE } from '../data/Reserves';
 import { useMultipleContractSingleData } from '../state/multicall/hooks';
 import { useFactoryContract, useMulticallContract } from './useContract';
 import { useActiveWeb3React } from 'hooks';
-import { ChainIdChainName } from '../../src/constants/index';
+import { chainId_ChainName } from '../../src/constants/index';
 import { Factory } from 'constants/contractConstants';
 
 export interface PoolCurrency {
