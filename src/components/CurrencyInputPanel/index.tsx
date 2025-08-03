@@ -299,7 +299,7 @@ const ExBox = styled.div`
   overflow: hidden;
   transition: all 0.3s ease-in-out;
   margin-bottom: 10px;
-  background: var(--bgLight);
+  background: #FFFFFF66;
   padding: 12px 12px;
   &:focus-within {
     box-shadow: 0 0 7px 2px rgba(0, 0, 0, 0.16);
@@ -307,7 +307,7 @@ const ExBox = styled.div`
   .input-container {
     position: relative;
     border-right: 1px solid #abd0d9;
-    width: 214px;
+    width: 390px;
     input {
       border: 0px;
       font-size: 24px;
@@ -385,7 +385,7 @@ const DropSelect = styled.div<{ isHomePage?: boolean; isFirst?: boolean }>`
     border-radius: 30px;
     padding: 0 12px 0 0;
     height: 19px;
-    background: #fff;
+    background: #FFFFFF66;
     width: 84px;
     .token {
       margin-right: 9px;
