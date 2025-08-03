@@ -102,7 +102,7 @@ const Pool = () => {
               </div>
               {/* Add Liquidity Button */}
               <button
-                className="relative z-10 w-full bg-[#3DBEA3] text-white font-medium text-base leading-[17.6px] rounded-full flex items-center justify-center space-x-2 mb-6 py-4"
+                className="relative z-10 w-full bg-[#3DBEA3] text-white font-medium text-base leading-[17.6px] rounded-full flex items-center justify-center space-x-2 mb-12 py-4"
                 type="button"
                 onClick={() => {
                   // If user is not connected, open wallet modal, else go to add liquidity
@@ -118,11 +118,11 @@ const Pool = () => {
               </button>
               {/* Loading, No Liquidity, or List Positions */}
               {v2IsLoading ? (
-                <div className="relative z-10 rounded-[12px] border bg-[#FFFFFF66] border-solid border-[#FFFFFF1A] p-10 text-center">
+                <div className="relative z-10 rounded-[12px] border bg-[#FFFFFF66] border-solid border-[#FFFFFF1A] mt-12 p-10 text-center">
                   <p className="text-black font-semibold text-xl leading-7 max-w-[380px] mx-auto">Loading...</p>
                 </div>
               ) : allV2PairsWithLiquidity.length === 0 ? (
-                <div className="relative z-10 rounded-[12px] border bg-[#FFFFFF66] border-solid border-[#FFFFFF1A] p-10 text-center">
+                <div className="relative z-10 rounded-[12px] border bg-[#FFFFFF66] border-solid border-[#FFFFFF1A] p-10 text-center mt-12">
                   <svg
                     className="mx-auto mb-[22px]"
                     xmlns="http://www.w3.org/2000/svg"
@@ -161,7 +161,7 @@ const Pool = () => {
                   </p>
                 </div>
               ) : (
-                <div className="relative z-10 rounded-[12px] border bg-[#FFFFFF66] border-solid border-[#FFFFFF1A] p-10 text-center">
+                <div className="relative z-10 rounded-[12px] border bg-[#FFFFFF66] border-solid border-[#FFFFFF1A] mt-12 p-10 text-center">
                   <h4 className="text-[#2A8576] font-bold text-2xl mb-6">Your Liquidity</h4>
                   <div className="flex flex-col gap-4">
                     {allV2PairsWithLiquidity.map((v2Pair) => (
