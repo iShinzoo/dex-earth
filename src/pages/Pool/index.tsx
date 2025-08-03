@@ -208,13 +208,6 @@ const Pool = () => {
         <div className="flex justify-center gap-3 md:mt-[60px] mt-[40px] items-center">
           <a
             href="#"
-            className="md:px-[32px] px-[20px] py-[16px] bg-[#3DBEA3] rounded-[80px] font-medium text-base text-white"
-            onClick={e => { e.preventDefault(); account === null ? toggleWalletModal() : disconnect(); }}
-          >
-            {account === null ? 'Connect Wallet' : 'Disconnect'}
-          </a>
-          <a
-            href="#"
             className="border-2 border-[#E9E9E9] md:px-[32px] px-[20px] py-[16px] rounded-[80px] font-medium text-base text-[#000000]"
           >
             Learn More

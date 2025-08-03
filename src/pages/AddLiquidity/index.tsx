@@ -177,8 +177,21 @@ export default function AddLiquidity({
   );
 
   const handleSwitchTokens = () => {
+    // Swap the local state tokens
+    setFromToken(toToken);
+    setToToken(fromToken);
+
+    // Optionally swap the input value field if needed for UX
+    if (independentField === Field.CURRENCY_A) {
+      onSwitchMintCurrencies();
+      onFieldAInput(typedValue);
+    } else if (independentField === Field.CURRENCY_B) {
+      onSwitchMintCurrencies();
+      onFieldBInput(typedValue);
+    }
+
+    // Update the URL as before
     history.push(`/add/${currencyIdB}/${currencyIdA}`);
-    onSwitchMintCurrencies();
   };
 
   // Max buttons
