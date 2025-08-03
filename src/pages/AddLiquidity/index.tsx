@@ -89,7 +89,7 @@ export default function AddLiquidity({
     liquidityMinted,
     poolTokenPercentage,
     error: mintError,
-  } = useDerivedMintInfo(currencyA ?? undefined, currencyB ?? undefined);
+  } = useDerivedMintInfo(fromToken ?? undefined, toToken ?? undefined);
 
   const { onFieldAInput, onFieldBInput, onSwitchMintCurrencies } = useMintActionHandlers(noLiquidity);
 
@@ -101,18 +101,14 @@ export default function AddLiquidity({
   }, [onFieldAInput, onFieldBInput]);
 
   // Max amounts
-  const maxAmounts = useMemo(
-    () => ({
-      [Field.CURRENCY_A]: maxAmountSpend(currencyBalances[Field.CURRENCY_A]),
-      [Field.CURRENCY_B]: maxAmountSpend(currencyBalances[Field.CURRENCY_B]),
-    }),
-    [currencyBalances]
-  );
+  const maxAmountInput = fromToken ? maxAmountSpend(currencyBalances[Field.CURRENCY_A]) : undefined;
+const maxAmountOutput = toToken ? maxAmountSpend(currencyBalances[Field.CURRENCY_B]) : undefined;
 
   const atMaxAmounts = {
-    [Field.CURRENCY_A]: maxAmounts[Field.CURRENCY_A]?.equalTo(parsedAmounts[Field.CURRENCY_A] ?? '0'),
-    [Field.CURRENCY_B]: maxAmounts[Field.CURRENCY_B]?.equalTo(parsedAmounts[Field.CURRENCY_B] ?? '0'),
+    [Field.CURRENCY_A]: maxAmountSpend(currencyBalances[Field.CURRENCY_A])?.equalTo(parsedAmounts[Field.CURRENCY_A] ?? '0'),
+    [Field.CURRENCY_B]: maxAmountSpend(currencyBalances[Field.CURRENCY_B])?.equalTo(parsedAmounts[Field.CURRENCY_B] ?? '0'),
   };
+
 
   const contractData = getContractData(chainId as any);
   const ROUTER_CONTRACT_ADDRESS = contractData.ROUTER_ADDRESS;
@@ -182,40 +178,40 @@ export default function AddLiquidity({
 
   // Max buttons
   const handleMaxA = useCallback(() => {
-    const value = maxAmounts[Field.CURRENCY_A]?.toExact();
+    const value = maxAmountSpend(currencyBalances[Field.CURRENCY_A])?.toExact();
     if (value !== undefined) {
       onFieldAInput(value);
     }
-  }, [maxAmounts, onFieldAInput]);
+  }, [currencyBalances, onFieldAInput]);
 
   const handleMaxB = useCallback(() => {
-    const value = maxAmounts[Field.CURRENCY_B]?.toExact();
+    const value = maxAmountSpend(currencyBalances[Field.CURRENCY_B])?.toExact();
     if (value !== undefined) {
       onFieldBInput(value);
     }
-  }, [maxAmounts, onFieldBInput]);
+  }, [currencyBalances, onFieldBInput]);
 
   // Percent-based input handlers
   const handleMaxFieldAAmount = useCallback(
     (percent: number) => {
-      const amount = maxAmounts[Field.CURRENCY_A];
+      const amount = maxAmountSpend(currencyBalances[Field.CURRENCY_A]);
       if (amount) {
         const value = (parseFloat(amount.toExact()) * percent) / 100;
         onFieldAInput(value.toString());
       }
     },
-    [maxAmounts, onFieldAInput]
+    [onFieldAInput, currencyBalances]
   );
 
   const handleMaxFieldBAmount = useCallback(
     (percent: number) => {
-      const amount = maxAmounts[Field.CURRENCY_B];
+      const amount = maxAmountSpend(currencyBalances[Field.CURRENCY_B]);
       if (amount) {
         const value = (parseFloat(amount.toExact()) * percent) / 100;
         onFieldBInput(value.toString());
       }
     },
-    [maxAmounts, onFieldBInput]
+    [onFieldBInput, currencyBalances]
   );
 
   // Add liquidity
@@ -393,12 +389,8 @@ export default function AddLiquidity({
             {/* Currency A */}
             <div className="flex-1 w-full">
               <CurrencyInputPanel
-                label="From"
-                label2={
-                  maxAmounts[Field.CURRENCY_A]?.toExact()
-                    ? `Availability: ${parseFloat(maxAmounts[Field.CURRENCY_A]?.toExact() || '0').toFixed(4)}`
-                    : ''
-                }
+                customBalanceText={`Availability: ${maxAmountInput?.toExact() ?? '0'} ${fromToken?.symbol ?? currencies[Field.CURRENCY_A]?.symbol ?? ''}`}
+                hideBalance={false}
                 value={
                   independentField === Field.CURRENCY_A
                     ? typedValue
@@ -430,12 +422,8 @@ export default function AddLiquidity({
             {/* Currency B */}
             <div className="flex-1 w-full">
               <CurrencyInputPanel
-                label="To"
-                label2={
-                  maxAmounts[Field.CURRENCY_B]?.toExact()
-                    ? `Availability: ${parseFloat(maxAmounts[Field.CURRENCY_B]?.toExact() || '0').toFixed(4)}`
-                    : ''
-                }
+                customBalanceText={`Availability: ${maxAmountOutput?.toExact() ?? '0'} ${toToken?.symbol ?? currencies[Field.CURRENCY_B]?.symbol ?? ''}`}
+                hideBalance={false}
                 value={
                   independentField === Field.CURRENCY_B
                     ? typedValue
