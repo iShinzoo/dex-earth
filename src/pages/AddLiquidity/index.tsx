@@ -449,7 +449,7 @@ export default function AddLiquidity({
                   <div>
                     <button
                       onClick={handleSwitchTokens}
-                      className="hover:bg-gray-100 p-2 rounded-full transition-colors"
+                      className="p-2 rounded-full transition-colors"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="28" height="29" fill="none">
                         <path

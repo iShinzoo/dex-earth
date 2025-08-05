@@ -1,13 +1,9 @@
-import { Currency, CurrencyAmount, JSBI, Token, TokenAmount, Trade } from '@bidelity/sdk';
-import React, { LegacyRef, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Currency, Token, TokenAmount } from '@bidelity/sdk';
+import React, {useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ThemeContext } from 'styled-components';
-import { ButtonConfirmed, ButtonError, ButtonPrimary } from '../../components/Button';
-import { GreyCard } from '../../components/Card';
-import Column from '../../components/Column';
+import { ButtonConfirmed, ButtonError } from '../../components/Button';
 import CurrencyInputPanel from '../../components/CurrencyInputPanel';
 import Loader from '../../components/Loader';
-import PoolsLink from '../../components/Poolslink';
 import TokenWarningModal from '../../components/TokenWarningModal';
 import ConfirmSwapModal from '../../components/swap/ConfirmSwapModal';
 import { SuccessTransactionModal } from '../../components/swap/SuccessTransactionModal';
@@ -29,9 +25,8 @@ import {
 import { useExpertModeManager, useUserSingleHopOnly, useUserSlippageTolerance } from '../../state/user/hooks';
 import { maxAmountSpend } from '../../utils/maxAmountSpend';
 import { computeTradePriceBreakdown, warningSeverity } from '../../utils/prices';
-import AmountTabs from '../../components/AmountTabs';
 import { useDerivedMintInfo } from '../../state/mint/hooks';
-import { FIVE_PERCENTS, ONE_HUNDRED, nativeSymbol, wrappedSymbol } from '../../constants';
+import { ONE_HUNDRED, nativeSymbol, wrappedSymbol } from '../../constants';
 import { useSwapPercents } from '../../hooks/useSwapPercents';
 import { ethers } from 'ethers';
 import { BigNumber } from '@ethersproject/bignumber';
@@ -399,7 +394,7 @@ const handleAmountChange = (value: string, isFrom: boolean) => {
                   </div>
                   {/* SWAP BUTTON */}
                   <div>
-                    <button onClick={handleSwapTokens} className="hover:bg-gray-100 p-2 rounded-full transition-colors">
+                    <button onClick={handleSwapTokens} className="p-2 rounded-full transition-colors">
                       <svg xmlns="http://www.w3.org/2000/svg" width="28" height="29" fill="none">
                         <path
                           fill="#000"
@@ -479,7 +474,7 @@ const handleAmountChange = (value: string, isFrom: boolean) => {
                   </div>
                 </div>
                 {/* ACTION BUTTONS */}
-                <div className="flex justify-center">
+                <div className="flex justify-center bg-[#3DBEA3]">
                   {showApproveFlow ? (
                     <div className="flex gap-2">
                       <ButtonConfirmed
@@ -610,12 +605,6 @@ const handleAmountChange = (value: string, isFrom: boolean) => {
                     pneumalog. Homon ol megan.
                 </p>
                 <div className="flex justify-center gap-3 md:mt-[60px] mt-[40px] items-center">
-                    <a
-                        href="#"
-                        className="md:px-[32px] px-[20px] py-[16px] bg-[#3DBEA3] rounded-[80px] font-medium text-base text-white"
-                    >
-                        Connect Wallet
-                    </a>
                     <a
                         href="#"
                         className="border-2 border-[#E9E9E9] md:px-[32px] px-[20px] py-[16px] rounded-[80px] font-medium text-base text-[#000000]"

@@ -261,7 +261,7 @@ const Navbar: React.FC = () => {
                 </svg>
               </button>
               {showAccountDropdown && (
-                <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                <div className="absolute right-0 mt-2 w-40 bg-[#FFFFFF66] border border-gray-200 rounded-lg shadow-lg z-50">
                   <button
                     className="w-full text-left px-4 py-2 text-sm text-gray-800 hover:bg-gray-100 rounded-lg"
                     onClick={() => { deactivate(); setShowAccountDropdown(false); }}

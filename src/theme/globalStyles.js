@@ -8,7 +8,7 @@ Gs.GlobalStyle = createGlobalStyle`
     margin: 0;
     padding: 0; 
     font-family: 'Barlow', sans-serif;
-    background-color:#fff; 
+    background-color:#FFFFFF66; 
     color:var(--txtColor); 
     font-size: 16px;
     & > iframe {pointer-events: none;}
@@ -59,7 +59,7 @@ Gs.BtnSm = styled.a`
   justify-content: center;
   border-radius: 5px;
   font-weight: 600;
-  color: #fff;
+  color: #FFFFFF66;
   transition: all 0.3s ease-in-out 0s;
   line-height: 1;
   text-transform: capitalize;
@@ -89,7 +89,7 @@ Gs.BtnSm = styled.a`
     &:hover {
       border: 1px solid var(--txtColor);
       background: var(--txtColor);
-      color: #fff;
+      color: #FFFFFF66;
     }
   }
   &.error {
@@ -122,7 +122,7 @@ Gs.PopupMain = styled.div`
 `;
 Gs.Popup = styled.div`
   box-shadow: 0px 6px 6px 0px rgba(0, 0, 0, 0.04);
-  background: #fff;
+  background: #FFFFFF66;
   border-radius: 30px;
   position: relative;
   top: 0;
@@ -193,7 +193,7 @@ Gs.OverLay = styled.div`
   right: 0;
   bottom: 0;
   z-index: 0;
-  background: #cfe6e9;
+  background: #FFFFFF66;
   opacity: 0.6;
 `;
 Gs.Percent = styled.div`
@@ -211,7 +211,7 @@ Gs.Percent = styled.div`
       border: 1px solid var(--primary);
     }
     &.active {
-      color: #fff;
+      color: #FFFFFF66;
       background: var(--primary);
       border: 1px solid var(--primary);
       box-shadow: 0px 0px 7px rgba(27, 202, 161, 0.52);

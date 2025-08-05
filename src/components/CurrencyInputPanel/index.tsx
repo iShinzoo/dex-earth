@@ -311,7 +311,7 @@ const ExBox = styled.div`
     input {
       border: 0px;
       font-size: 24px;
-      background: none;
+      background: #FFFFFF66;
       color: var(--txtLight);
       font-family: var(--font);
       padding: 0 55px 20px 0;

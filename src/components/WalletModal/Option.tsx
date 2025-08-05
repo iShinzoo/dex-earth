@@ -6,7 +6,7 @@ const InfoCard = styled.div`
   outline: none;
   border: none;
   padding: 0;
-  background-color: transparent;
+  background-color: #FFFFFF66;
   border-radius: 12px;
   cursor: pointer;
   width: 100% !important;
@@ -20,7 +20,7 @@ const OptionCard = styled(InfoCard as any)`
 `;
 
 const OptionCardClickable = styled(OptionCard as any)<{ clickable?: boolean }>`
-  background: var(--bgLight);
+  background: #FFFFFF66;
   display: flex;
   align-items: center;
   width: 100%;
